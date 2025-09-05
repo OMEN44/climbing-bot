@@ -1,1 +1,7 @@
 # climbing
+
+Install node:
+
+```console
+
+```

@@ -1,4 +1,8 @@
 {
   "name": "climbing",
-  "packageManager": "yarn@4.9.2"
+  "packageManager": "yarn@4.9.2",
+  "dependencies": {
+    "discord-api-types": "^0.38.22",
+    "discord.js": "^14.22.1"
+  }
 }
