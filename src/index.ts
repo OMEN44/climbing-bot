@@ -15,7 +15,7 @@ import {
     getCapacityData,
     getNewResets,
 } from "./urbanClimb";
-import token from "./token.json";
+import token from "../token.json";
 
 console.log("Starting application...");
 
