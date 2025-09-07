@@ -79,22 +79,6 @@ const app = async () => {
     urbanClimbData = await formatData();
     const channel = await discordClient.channels.cache.get(DISCORD_CHANNEL_ID);
 
-    // (channel! as TextChannel).send("Larry has started...");
-
-    //    console.log(JSON.stringify(urbanClimbData, null, 2));
-
-    // const miltonId = "690326f9-98ce-4249-bd91-53a0676a137b";
-    // urbanClimbData[miltonId].resets = urbanClimbData[miltonId].resets.filter(
-    //     (reset) => {
-    //         return reset.wallName === "Zepplin";
-    //     }
-    // );
-    // urbanClimbData[miltonId].alerts = urbanClimbData[miltonId].alerts.filter(
-    //     (alert) => {
-    //         return alert.name !== "Sensory Mornings ";
-    //     }
-    // );
-
     setInterval(async () => {
         const newData = await formatData();
 

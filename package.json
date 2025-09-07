@@ -1,8 +1,11 @@
 {
-  "name": "climbing",
-  "packageManager": "yarn@4.9.2",
-  "dependencies": {
-    "discord-api-types": "^0.38.22",
-    "discord.js": "^14.22.1"
-  }
+    "name": "climbing",
+    "packageManager": "yarn@4.9.2",
+    "dependencies": {
+        "discord-api-types": "^0.38.22",
+        "discord.js": "^14.22.1"
+    },
+    "scripts": {
+        "start": "npx tsx src/index.ts"
+    }
 }
