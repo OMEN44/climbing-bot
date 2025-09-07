@@ -8,7 +8,13 @@ import {
     TextChannel,
 } from "discord.js";
 import { deepObjectDiff } from "./objectDiff";
-import { BranchData, formatData, getNewResets } from "./urbanClimb";
+import {
+    BranchData,
+    fetchLocationData,
+    formatData,
+    getCapacityData,
+    getNewResets,
+} from "./urbanClimb";
 import token from "./token.json";
 
 console.log("Starting application...");
@@ -16,52 +22,17 @@ console.log("Starting application...");
 type ClientExt = Client & { commands: Collection<string, any> };
 
 const discordClient = new Client({
-    intents: [GatewayIntentBits.Guilds],
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMessageReactions,
+    ],
 }) as ClientExt;
 
 discordClient.once(Events.ClientReady, (c) => {
     console.log(`Discord client ready! Logged in as ${c.user.tag}`);
 });
-
-// const command = {
-//     data: new SlashCommandBuilder()
-//         .setName("user")
-//         .setDescription("Provides information about the user."),
-//     async execute(interaction) {
-//         // interaction.user is the object representing the User who ran the command
-//         // interaction.member is the GuildMember object, which represents the user in the specific guild
-//         await interaction.reply(
-//             `This command was run by ${interaction.user.username}, who joined on ${interaction.member.joinedAt}.`
-//         );
-//     },
-// };
-
-// discordClient.commands = new Collection();
-// discordClient.commands.set(command.data.name, command);
-
-// discordClient.on(Events.InteractionCreate, async (interaction) => {
-//     if (!interaction.isChannelSelectMenu()) return;
-
-//     const command = (interaction.client as ClientExt).commands.get(
-//         interaction.commandName
-//     );
-
-//     if (!command) {
-//         console.error(
-//             `No command matching ${interaction.commandName} was found.`
-//         );
-//         return;
-//     }
-
-//     try {
-//         await command.execute(interaction);
-//     } catch (error) {
-//         console.error(
-//             `Error executing command ${interaction.commandName}:`,
-//             error
-//         );
-//     }
-// });
 
 // const INTERVAL_TIME_MS = 5 * 60 * 1000; // 5 minutes
 // const INTERVAL_TIME_MS = 5 * 1000; // 5 seconds
@@ -73,34 +44,61 @@ const DISCORD_MENTION_ID = "<@&1411522231678406688>"; // the & is for a role
 let urbanClimbData: BranchData | null = null;
 
 const app = async () => {
-    console.log(token.token);
+    const nameIdMap: Record<string, string> = (await fetchLocationData()).props
+        .pageProps.branches;
+
+    console.log(nameIdMap);
+
+    discordClient.on(Events.MessageCreate, async (message) => {
+        if (message.author.bot) return;
+        if (message.content === "ping") message.channel.send("pong");
+        else if (
+            message.mentions.users.keys().next().value ===
+            discordClient.user!.id
+        ) {
+            const minMessage = message.content
+                .replaceAll(" ", "")
+                .toLocaleLowerCase()
+                .trim();
+            let messageContent = "";
+            const includeAll = minMessage === `<@${discordClient.user!.id}>`;
+            for (const name of Object.keys(nameIdMap)) {
+                if (minMessage.includes(name) || includeAll) {
+                    const branchId = nameIdMap[name];
+                    messageContent += `## ${name}:\n`;
+                    const capacity = await getCapacityData(branchId);
+                    messageContent += `${capacity.status} with ${capacity.currently_at_venue} climbers (capacity ${capacity.current_percentage})\n`;
+                }
+            }
+            if (messageContent !== "") message.channel.send(messageContent);
+        }
+    });
+
     await discordClient.login(token.token);
 
     urbanClimbData = await formatData();
     const channel = await discordClient.channels.cache.get(DISCORD_CHANNEL_ID);
 
-    (channel! as TextChannel).send("Larry has started...");
+    // (channel! as TextChannel).send("Larry has started...");
 
     //    console.log(JSON.stringify(urbanClimbData, null, 2));
 
-    const miltonId = "690326f9-98ce-4249-bd91-53a0676a137b";
-    urbanClimbData[miltonId].resets = urbanClimbData[miltonId].resets.filter(
-        (reset) => {
-            return reset.wallName === "Zepplin";
-        }
-    );
-    urbanClimbData[miltonId].alerts = urbanClimbData[miltonId].alerts.filter(
-        (alert) => {
-            return alert.name !== "Sensory Mornings ";
-        }
-    );
+    // const miltonId = "690326f9-98ce-4249-bd91-53a0676a137b";
+    // urbanClimbData[miltonId].resets = urbanClimbData[miltonId].resets.filter(
+    //     (reset) => {
+    //         return reset.wallName === "Zepplin";
+    //     }
+    // );
+    // urbanClimbData[miltonId].alerts = urbanClimbData[miltonId].alerts.filter(
+    //     (alert) => {
+    //         return alert.name !== "Sensory Mornings ";
+    //     }
+    // );
 
     setInterval(async () => {
         const newData = await formatData();
 
         const diff = getNewResets(urbanClimbData!, newData);
-
-        (channel! as TextChannel).send(JSON.stringify(diff, null, 2));
 
         if (diff) {
             // TODO: do something with the diff
