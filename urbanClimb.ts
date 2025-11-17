@@ -61,35 +61,38 @@ export const formatData = async () => {
             // Create list of planned sets
             branchData.props.pageProps.data.routeSettingSchedule.forEach(
                 (reset) => {
+                    if (reset.wallOrStation === null) return;
                     const station = allStations!.find(
                         (s) => s.id === reset.wallOrStation
                     );
                     output[branches[branch]].resets.push({
                         wallId: station!.id,
                         date: new Date(reset.date),
-                        wallName: station!.name,
+                        wallName: station?.name ?? 'Unknown wall',
                     });
                 }
             );
 
         // Create list of alerts
-        branchData.props.pageProps.data.alerts.forEach((alert) => {
-            let description = "";
-            alert.modal.contentRaw.forEach((line) => {
-                let newLine = "";
-                line.children.forEach((child) => {
-                    newLine += child.text ?? "";
-                });
-                description += newLine + "\n";
-            });
+        if (branchData.props.pageProps.data.alerts) {
+		branchData.props.pageProps.data.alerts.forEach((alert) => {
+		    let description = "";
+		    alert.modal.contentRaw.forEach((line) => {
+		        let newLine = "";
+		        line.children.forEach((child) => {
+		            newLine += child.text ?? "";
+		        });
+		        description += newLine + "\n";
+		    });
 
-            output[branches[branch]].alerts.push({
-                name: alert.snippet,
-                start: alert.startDate ? new Date(alert.startDate) : null,
-                end: alert.endDate ? new Date(alert.endDate) : null,
-                description: description,
-            });
-        });
+		    output[branches[branch]].alerts.push({
+		        name: alert.snippet,
+		        start: alert.startDate ? new Date(alert.startDate) : null,
+		        end: alert.endDate ? new Date(alert.endDate) : null,
+		        description: description,
+		    });
+		});
+	}
     }
 
     return output;
