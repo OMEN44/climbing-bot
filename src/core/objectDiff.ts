@@ -4,7 +4,10 @@
  * @param {Object} current - Current form data
  * @returns {Object|null} Object containing only the changed fields, or null if no changes
  */
-function deepObjectDiff(original, current) {
+function deepObjectDiff(
+    original: Record<string, any>,
+    current: Record<string, any>,
+): object | null {
     if (original === current) return null;
 
     // Handle non-object types (including null)
@@ -29,7 +32,7 @@ function deepObjectDiff(original, current) {
             };
         }
 
-        const arrayDiffs = {};
+        const arrayDiffs = [];
         let hasChanges = false;
 
         for (let i = 0; i < original.length; i++) {
@@ -43,7 +46,7 @@ function deepObjectDiff(original, current) {
         return hasChanges ? arrayDiffs : null;
     }
 
-    const changes = {};
+    const changes: Record<string, object> = {};
     let hasChanges = false;
 
     // Check for changes in current object

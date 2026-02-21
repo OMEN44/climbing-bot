@@ -1,10 +1,10 @@
 import { BranchId, Station, UrbanClimbData } from "./types";
 
 export const fetchLocationData = async (
-    location?: string
+    location?: string,
 ): Promise<UrbanClimbData> => {
     const raw = await fetch(
-        `https://urbanclimb.com.au/locations/${location ? `${location}/` : ""}`
+        `https://urbanclimb.com.au/locations/${location ? `${location}/` : ""}`,
     ).then((data) => data.text());
 
     const start =
@@ -45,15 +45,15 @@ export const formatData = async () => {
 
     let output: BranchData = {};
 
-    for (const branch of Object.keys(branches)) {
+    for (const branch of Object.keys(branches) as BranchId[]) {
         const branchData = await fetchLocationData(
-            branch === "westend" ? "west-end" : branch
+            branch === "westend" ? "west-end" : branch,
         );
         if (!allStations)
             allStations = branchData.props.pageProps.route_setting_stations;
 
         output[branches[branch]] = {
-            name: branch as BranchId,
+            name: branch,
             alerts: [],
             resets: [],
         };
@@ -63,36 +63,36 @@ export const formatData = async () => {
                 (reset) => {
                     if (reset.wallOrStation === null) return;
                     const station = allStations!.find(
-                        (s) => s.id === reset.wallOrStation
+                        (s) => s.id === reset.wallOrStation,
                     );
                     output[branches[branch]].resets.push({
                         wallId: station!.id,
                         date: new Date(reset.date),
-                        wallName: station?.name ?? 'Unknown wall',
+                        wallName: station?.name ?? "Unknown wall",
                     });
-                }
+                },
             );
 
         // Create list of alerts
         if (branchData.props.pageProps.data.alerts) {
-		branchData.props.pageProps.data.alerts.forEach((alert) => {
-		    let description = "";
-		    alert.modal.contentRaw.forEach((line) => {
-		        let newLine = "";
-		        line.children.forEach((child) => {
-		            newLine += child.text ?? "";
-		        });
-		        description += newLine + "\n";
-		    });
+            branchData.props.pageProps.data.alerts.forEach((alert) => {
+                let description = "";
+                alert.modal.contentRaw.forEach((line) => {
+                    let newLine = "";
+                    line.children.forEach((child) => {
+                        newLine += child.text ?? "";
+                    });
+                    description += newLine + "\n";
+                });
 
-		    output[branches[branch]].alerts.push({
-		        name: alert.snippet,
-		        start: alert.startDate ? new Date(alert.startDate) : null,
-		        end: alert.endDate ? new Date(alert.endDate) : null,
-		        description: description,
-		    });
-		});
-	}
+                output[branches[branch]].alerts.push({
+                    name: alert.snippet,
+                    start: alert.startDate ? new Date(alert.startDate) : null,
+                    end: alert.endDate ? new Date(alert.endDate) : null,
+                    description: description,
+                });
+            });
+        }
     }
 
     return output;
@@ -114,7 +114,7 @@ export const getNewResets = (oldData: BranchData, newData: BranchData) => {
                     // Multiple resets for 1 wall can be posted but not at the same time
                     (r) =>
                         r.date.getTime() === reset.date.getTime() &&
-                        r.wallId === reset.wallId
+                        r.wallId === reset.wallId,
                 )
             ) {
                 if (!diff[location])
@@ -157,7 +157,7 @@ export interface CapacityData {
 }
 
 export const getCapacityData = async (
-    venueUUID: string
+    venueUUID: string,
 ): Promise<CapacityData> => {
     return (
         await fetch(
@@ -181,7 +181,7 @@ export const getCapacityData = async (
                 },
                 body: null,
                 method: "GET",
-            }
+            },
         )
     ).json();
 };

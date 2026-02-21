@@ -1,3 +1,8 @@
+import { Client, Collection } from "discord.js";
+
+export type ClientExt = Client & { commands: Collection<string, any> };
+
+// URBAN CLIMB TYPES
 export type BranchId =
     | "milton"
     | "newstead"

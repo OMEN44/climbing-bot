@@ -1,38 +1,13 @@
+import { Events } from "discord.js";
 import {
-    Client,
-    Collection,
-    Events,
-    GatewayIntentBits,
-    MessageFlags,
-    SlashCommandBuilder,
-    TextChannel,
-} from "discord.js";
-import { deepObjectDiff } from "./objectDiff";
-import {
-    BranchData,
     fetchLocationData,
     formatData,
     getCapacityData,
     getNewResets,
-} from "./urbanClimb";
-import token from "./token.json";
-
-console.log("Starting application...");
-
-type ClientExt = Client & { commands: Collection<string, any> };
-
-const discordClient = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMessageReactions,
-    ],
-}) as ClientExt;
-
-discordClient.once(Events.ClientReady, (c) => {
-    console.log(`Discord client ready! Logged in as ${c.user.tag}`);
-});
+    BranchData,
+} from "./urbanClimbInterface";
+import type { ClientExt } from "./types";
+import { newSetReminder } from "../commands/todaysSets";
 
 // const INTERVAL_TIME_MS = 5 * 60 * 1000; // 5 minutes
 // const INTERVAL_TIME_MS = 5 * 1000; // 5 seconds
@@ -43,25 +18,24 @@ const DISCORD_MENTION_ID = "<@&1411522231678406688>"; // the & is for a role
 
 let urbanClimbData: BranchData | null = null;
 
-const app = async () => {
+export const app = async (dClient: ClientExt, token: string) => {
     const nameIdMap: Record<string, string> = (await fetchLocationData()).props
         .pageProps.branches;
 
     console.log(nameIdMap);
 
-    discordClient.on(Events.MessageCreate, async (message) => {
+    dClient.on(Events.MessageCreate, async (message) => {
         if (message.author.bot) return;
         if (message.content === "ping") message.channel.send("pong");
         else if (
-            message.mentions.users.keys().next().value ===
-            discordClient.user!.id
+            message.mentions.users.keys().next().value === dClient.user!.id
         ) {
             const minMessage = message.content
                 .replaceAll(" ", "")
                 .toLocaleLowerCase()
                 .trim();
             let messageContent = "";
-            const includeAll = minMessage === `<@${discordClient.user!.id}>`;
+            const includeAll = minMessage === `<@${dClient.user!.id}>`;
             for (const name of Object.keys(nameIdMap)) {
                 if (minMessage.includes(name) || includeAll) {
                     const branchId = nameIdMap[name];
@@ -74,26 +48,10 @@ const app = async () => {
         }
     });
 
-    await discordClient.login(token.token);
+    await dClient.login(token);
 
     urbanClimbData = await formatData();
-    const channel = await discordClient.channels.cache.get(DISCORD_CHANNEL_ID);
-
-    // (channel! as TextChannel).send("Larry has started...");
-
-    //    console.log(JSON.stringify(urbanClimbData, null, 2));
-
-    // const miltonId = "690326f9-98ce-4249-bd91-53a0676a137b";
-    // urbanClimbData[miltonId].resets = urbanClimbData[miltonId].resets.filter(
-    //     (reset) => {
-    //         return reset.wallName === "Zepplin";
-    //     }
-    // );
-    // urbanClimbData[miltonId].alerts = urbanClimbData[miltonId].alerts.filter(
-    //     (alert) => {
-    //         return alert.name !== "Sensory Mornings ";
-    //     }
-    // );
+    const channel = await dClient.channels.cache.get(DISCORD_CHANNEL_ID);
 
     setInterval(async () => {
         const newData = await formatData();
@@ -135,6 +93,8 @@ const app = async () => {
             urbanClimbData = newData;
         }
     }, INTERVAL_TIME_MS);
-};
 
-app();
+    if (channel && channel.isTextBased() && channel.isSendable()) {
+        newSetReminder(channel, urbanClimbData);
+    }
+};
