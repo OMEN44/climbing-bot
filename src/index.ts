@@ -1,7 +1,7 @@
 import { Client, Events, GatewayIntentBits } from "discord.js";
 import { ClientExt } from "./core/types";
 import { app } from "./core/app";
-import token from "./token.json";
+import token from "../token.json";
 
 const discordClient = new Client({
     intents: [
