@@ -1,9 +1,3 @@
-export interface Config {
-    token: string;
-    clientId: string;
-    guildId: string | null;
-}
-
 import { Client, Collection } from "discord.js";
 
 export type ClientExt = Client & { commands: Collection<string, any> };
@@ -315,7 +309,7 @@ export interface Data {
     };
     imageGallery: {
         __typename: TypeName;
-        image: Image;
+        images: Image;
         caption: string;
     }[];
     gymsNearBy: {

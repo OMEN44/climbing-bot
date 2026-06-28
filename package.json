@@ -2,7 +2,8 @@
     "name": "climbing",
     "packageManager": "yarn@4.9.2",
     "scripts": {
-        "start": "npx tsx src/index.ts"
+        "start": "npx tsx src/index.ts",
+        "deploy": "npx tsx src/registerCommands.ts"
     },
     "dependencies": {
         "discord-api-types": "^0.38.22",

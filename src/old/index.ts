@@ -1,14 +1,19 @@
 import { Client, Events, GatewayIntentBits } from "discord.js";
+import { ClientExt } from "./core/types";
 import { app } from "./core/app";
-import config from "../config.json";
+import token from "../../token.json";
 
-const client = new Client({
+const discordClient = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMessageReactions,
     ],
+}) as ClientExt;
+
+discordClient.once(Events.ClientReady, (c) => {
+    console.log(`Discord client ready! Logged in as ${c.user.tag}`);
 });
 
-app(client, config);
+app(discordClient, token.token);
