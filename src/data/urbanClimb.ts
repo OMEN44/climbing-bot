@@ -173,21 +173,26 @@ const setupData = async (savedData?: Branches): Promise<Branches> => {
                     hasStations: area.has_stations,
                     displayName: area.name,
                 }));
-            branchDraft.images = [
-                {
+            branchDraft.images = [];
+            if (loc.heroImage) {
+                branchDraft.images.push({
                     url: loc.heroImage.asset.url,
                     alt: "Cover image for " + branch.name,
-                },
-            ];
-            branchDraft.openingHours = loc.locationOpeningTimes.times.map(
-                (time) => ({
-                    // TODO: process these to date objects
-                    type: time.type,
-                    age: time.age || null,
-                    weekday: time.weekdayTimes,
-                    weekend: time.weekendTimes,
-                }),
-            );
+                });
+            }
+            if (loc.locationOpeningTimes) {
+                branchDraft.openingHours = loc.locationOpeningTimes.times.map(
+                    (time) => ({
+                        // TODO: process these to date objects
+                        type: time.type,
+                        age: time.age || null,
+                        weekday: time.weekdayTimes,
+                        weekend: time.weekendTimes,
+                    }),
+                );
+            } else {
+                branchDraft.openingHours = [];
+            }
             // initialise any remaining unset fields (probaly only needed if there is no save)
             if (!branchDraft.location) {
                 branchDraft.location = null;
@@ -239,11 +244,13 @@ const updateBranchData = async (data: Branches) => {
     for (const [branchId, branch] of entries) {
         const slug = branch.displayName.toLowerCase().replaceAll(" ", "-");
         const props = (await fetchLocationData(slug)).props.pageProps;
-        // console.log(slug, props.data);
-        data[branchId].location = {
-            address: props.data.address.address,
-            mapsUrl: props.data.address.addressUrl,
-        };
+
+        data[branchId].location = props.data.address
+            ? {
+                  address: props.data.address.address,
+                  mapsUrl: props.data.address.addressUrl,
+              }
+            : null;
         if (props.data.alerts) {
             data[branchId].alerts = props.data.alerts.map((alert) => ({
                 important: alert.autoOpen ?? false,
@@ -253,64 +260,74 @@ const updateBranchData = async (data: Branches) => {
                 endDate: alert.endDate ? new Date(alert.endDate) : null,
             }));
         }
-        data[branchId].images.push(
-            ...props.data.imageGallery
-                .map((image) => ({
-                    url: image.image.asset.url,
-                    alt: image.caption || `Image for ${branch.displayName}`,
-                }))
-                .filter(
-                    (image) =>
-                        !branch.images.some((img) => img.url === image.url),
-                ),
-        );
-        data[branchId].facilities = props.data.gymFacilities.facilities;
-
-        for (const setInfo of props.data.routeSettingSchedule) {
-            const station = props.route_setting_stations.find(
-                (s) => s.id === setInfo.wallOrStation,
+        if (props.data.imageGallery) {
+            data[branchId].images.push(
+                ...props.data.imageGallery
+                    .map((image) => ({
+                        url: image.image.asset.url,
+                        alt: image.caption || `Image for ${branch.displayName}`,
+                    }))
+                    .filter(
+                        (image) =>
+                            !branch.images.some((img) => img.url === image.url),
+                    ),
             );
-            if (!station) continue; // shouldnt happen
-            const stationDraft: Station = {
-                name: station.name,
-                activities: station.activities,
-                lastSet: data[branchId].stations[station.id]?.lastSet ?? null,
-                nextSetStart:
-                    data[branchId].stations[station.id]?.nextSetStart ?? null,
-                nextSetEnd:
-                    data[branchId].stations[station.id]?.nextSetEnd ?? null,
-            };
+        }
+        if (props.data.gymFacilities)
+            data[branchId].facilities = props.data.gymFacilities.facilities;
 
-            const date = new Date(setInfo.date);
-            if (date > new Date()) {
-                // future set
-                if (!stationDraft.nextSetStart && !stationDraft.nextSetEnd) {
-                    // must be new so set date for start and end
-                    stationDraft.nextSetStart = date;
-                    stationDraft.nextSetEnd = date;
-                } else if (
-                    stationDraft.nextSetStart &&
-                    date < stationDraft.nextSetStart &&
-                    stationDraft.lastSet &&
-                    date > stationDraft.lastSet
-                ) {
-                    // between last set and next start, so update next start
-                    stationDraft.nextSetStart = date;
-                } else if (
-                    stationDraft.nextSetEnd &&
-                    date > stationDraft.nextSetEnd
-                ) {
-                    // after next end, so update next end
-                    stationDraft.nextSetEnd = date;
+        if (props.data.routeSettingSchedule) {
+            for (const setInfo of props.data.routeSettingSchedule) {
+                const station = props.route_setting_stations.find(
+                    (s) => s.id === setInfo.wallOrStation,
+                );
+                if (!station) continue; // shouldnt happen
+                const stationDraft: Station = {
+                    name: station.name,
+                    activities: station.activities,
+                    lastSet:
+                        data[branchId].stations[station.id]?.lastSet ?? null,
+                    nextSetStart:
+                        data[branchId].stations[station.id]?.nextSetStart ??
+                        null,
+                    nextSetEnd:
+                        data[branchId].stations[station.id]?.nextSetEnd ?? null,
+                };
+
+                const date = new Date(setInfo.date);
+                if (date > new Date()) {
+                    // future set
+                    if (
+                        !stationDraft.nextSetStart &&
+                        !stationDraft.nextSetEnd
+                    ) {
+                        // must be new so set date for start and end
+                        stationDraft.nextSetStart = date;
+                        stationDraft.nextSetEnd = date;
+                    } else if (
+                        stationDraft.nextSetStart &&
+                        date < stationDraft.nextSetStart &&
+                        stationDraft.lastSet &&
+                        date > stationDraft.lastSet
+                    ) {
+                        // between last set and next start, so update next start
+                        stationDraft.nextSetStart = date;
+                    } else if (
+                        stationDraft.nextSetEnd &&
+                        date > stationDraft.nextSetEnd
+                    ) {
+                        // after next end, so update next end
+                        stationDraft.nextSetEnd = date;
+                    }
+                } else {
+                    // past set, so update last set if its newer than the current last set
+                    if (!stationDraft.lastSet || date > stationDraft.lastSet) {
+                        stationDraft.lastSet = date;
+                    }
                 }
-            } else {
-                // past set, so update last set if its newer than the current last set
-                if (!stationDraft.lastSet || date > stationDraft.lastSet) {
-                    stationDraft.lastSet = date;
-                }
+
+                data[branchId].stations[station.id] = stationDraft;
             }
-
-            data[branchId].stations[station.id] = stationDraft;
         }
     }
 

@@ -18,3 +18,15 @@ node_modules
 .env
 
 token.json
+config.json
+config-larry.json
+# Devenv
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml

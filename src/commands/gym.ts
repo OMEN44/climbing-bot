@@ -187,7 +187,7 @@ export const gymCommand = {
                 newIndex = (currentIndex + 1) % branchIds.length;
 
             const newGymUID = branchIds[newIndex];
-            const embedActionMap: Record<
+            // const embedActionMap: Record<
             const newMessage = {
                 embeds: [embeds.home(data[newGymUID])],
                 components: [
