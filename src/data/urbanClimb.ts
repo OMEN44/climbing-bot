@@ -37,6 +37,7 @@ export interface Branch {
         endDate: Date | null;
     }>;
     capacity: {
+        status: string | null;
         current: number | null;
         max: number | null;
         lastUpdateDayIndex: number | null; // index of the day for the last update (0-6, where 0 is Sunday)
@@ -202,6 +203,7 @@ const setupData = async (savedData?: Branches): Promise<Branches> => {
             }
             if (!branchDraft.capacity) {
                 branchDraft.capacity = {
+                    status: null,
                     current: null,
                     max: null,
                     lastUpdateDayIndex: new Date().getDay(),
@@ -340,6 +342,7 @@ const updateCapacityData = async (data: Branches) => {
         const capacityData = await getCapacityData(branchId);
         const capacity = data[branchId].capacity;
 
+        capacity.status = capacityData.status;
         capacity.current = capacityData.currently_at_venue;
         capacity.max = capacityData.capacity;
         if (

@@ -6,6 +6,7 @@ import {
 import { gymCommand } from "./gym";
 import { Branches } from "../data/urbanClimb";
 import { viewSubscriptions } from "./viewSubscriptions";
+import { capacityCommand } from "./capacity";
 
 export interface Command {
     command: SlashCommandOptionsOnlyBuilder;
@@ -22,4 +23,5 @@ export interface Command {
 export const availableCommands: Array<Command> = [
     gymCommand,
     viewSubscriptions,
+    capacityCommand,
 ];
