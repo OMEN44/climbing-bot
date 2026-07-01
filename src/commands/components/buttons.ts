@@ -1,16 +1,14 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import { PageName } from "../gym";
 
 export type ButtonAction =
+    | PageName
     | "left"
     | "right"
     | "select"
     | "back"
-    | "schedule"
-    | "news"
-    | "capacity"
     | "subscribe"
-    | "unsubscribe"
-    | "home";
+    | "unsubscribe";
 
 const left = (commandName: string, id?: string | number) =>
     new ButtonBuilder()

@@ -23,6 +23,11 @@ const register = async () => {
                 fullRoute = Routes.applicationCommands(clientId);
             }
 
+            // remove all commands
+            (await rest.put(fullRoute, {
+                body: [],
+            })) as string;
+
             // The put method is used to fully refresh all commands in the guild with the current set
             const data = (await rest.put(fullRoute, {
                 body: commandsJSON,

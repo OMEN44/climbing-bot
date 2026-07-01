@@ -81,7 +81,7 @@ const capacity = (branches: Branches, branchUID: string) => {
 
     // get the most recent trend data for the current day
     const trend = data.trend[data.trend.length - 1]?.[currentDay];
-    console.log(trend);
+    // console.log(trend);
     // generate a percentage for every third value starting at the most recent value
     // store GRID_SIZE values or as many as are available in the trend
     const percentages = (
@@ -89,7 +89,7 @@ const capacity = (branches: Branches, branchUID: string) => {
     ).map((value) =>
         data.max ? Math.round((value / data.max) * GRID_SIZE) : 0,
     );
-    console.log(percentages);
+    // console.log(percentages);
     while (percentages.length < GRID_SIZE) {
         percentages.unshift(0);
     }
@@ -103,8 +103,8 @@ const capacity = (branches: Branches, branchUID: string) => {
         }
         rows.push(row.join(""));
     }
-    console.log(percentages);
-    console.log(rows);
+    // console.log(percentages);
+    // console.log(rows);
 
     return baseEmbed({
         title: `${branch.displayName} Capacity`,
@@ -130,13 +130,13 @@ const news = (branch: Branch) => {
     const alerts = branch.alerts;
 };
 
-const sets = {};
+const schedule = {};
 const alerts = {};
 
 export default {
     home,
     capacity,
     news,
-    sets,
+    schedule,
     alerts,
 };

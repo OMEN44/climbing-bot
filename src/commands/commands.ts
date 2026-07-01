@@ -5,6 +5,7 @@ import {
 } from "discord.js";
 import { gymCommand } from "./gym";
 import { Branches } from "../data/urbanClimb";
+import { viewSubscriptions } from "./viewSubscriptions";
 
 export interface Command {
     command: SlashCommandOptionsOnlyBuilder;
@@ -18,4 +19,7 @@ export interface Command {
     ) => Promise<void>;
 }
 
-export const availableCommands: Array<Command> = [gymCommand];
+export const availableCommands: Array<Command> = [
+    gymCommand,
+    viewSubscriptions,
+];

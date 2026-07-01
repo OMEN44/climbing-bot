@@ -1,23 +1,28 @@
 import {
+    ButtonInteraction,
     ChatInputCommandInteraction,
     InteractionReplyOptions,
+    InteractionUpdateOptions,
     MessageFlags,
-    MessagePayload,
     SlashCommandBuilder,
 } from "discord.js";
 import { Branches } from "../data/urbanClimb";
 import embeds from "./components/embeds";
 import buttons, { ButtonAction } from "./components/buttons";
 import { Command } from "./commands";
+import rawData from "../../data.json";
+
+export type PageName = "home" | "schedule" | "news" | "capacity";
 
 // map of gym UID to get updates for and the channel ID to send them to
-const subscriptions: Record<string, string> = {};
+export const subscriptions: Record<string, string[]> = {};
 const messageCache: Record<
     string,
     {
         gymUID: string;
+        currentPage: PageName;
         disabledButtons?: ButtonAction[];
-        state: InteractionReplyOptions;
+        state: InteractionReplyOptions | InteractionUpdateOptions;
         createdAt: Date;
     }
 > = {};
@@ -26,9 +31,9 @@ const COMMAND_NAME = "gym";
 const navigationRow = (id: string) =>
     buttons.buttonRow(
         buttons.left(COMMAND_NAME, id),
-        // buttons.select(COMMAND_NAME, id),
         buttons.right(COMMAND_NAME, id),
     );
+
 const optionsRow = (
     id: string,
     subscribed: boolean,
@@ -52,6 +57,65 @@ const optionsRow = (
             : buttons.subscribe(COMMAND_NAME, id),
     );
 
+export const buildMessage = (
+    gymUID: string,
+    interactionId: string,
+    page: PageName,
+    data: Branches,
+    interaction: ChatInputCommandInteraction | ButtonInteraction,
+) => {
+    // find embed builder
+    const pageEmbed =
+        page === "home"
+            ? [embeds.home(data[gymUID])]
+            : page === "capacity"
+              ? [embeds.capacity(data, gymUID)]
+              : [];
+
+    // determine disabled buttons
+    const disabledButtons = messageCache[interactionId]?.disabledButtons ?? [];
+    (["home", "schedule", "news", "capacity"] as ButtonAction[]).forEach(
+        (button) => {
+            const indexToRemove = disabledButtons.findIndex(
+                (b) => b === button,
+            );
+            if (indexToRemove !== -1) disabledButtons.splice(indexToRemove, 1);
+        },
+    );
+    disabledButtons.push(page);
+
+    // build message
+    const output = {
+        embeds: pageEmbed,
+        components: [
+            optionsRow(
+                interactionId,
+                subscriptions[gymUID]?.includes(interaction.channelId) ?? false,
+                disabledButtons,
+            ),
+            navigationRow(interactionId),
+        ],
+    };
+
+    // update cache
+    if (!messageCache[interactionId]) {
+        messageCache[interactionId] = {
+            gymUID,
+            createdAt: new Date(),
+            currentPage: page,
+            state: output,
+            disabledButtons,
+        };
+    } else {
+        messageCache[interactionId].gymUID = gymUID;
+        messageCache[interactionId].currentPage = page;
+        messageCache[interactionId].state = output;
+        messageCache[interactionId].disabledButtons = disabledButtons;
+    }
+
+    return output;
+};
+
 export const gymCommand = {
     command: new SlashCommandBuilder()
         .setName(COMMAND_NAME)
@@ -60,6 +124,14 @@ export const gymCommand = {
         .addStringOption((option) =>
             option
                 .setName("branch")
+                .addChoices(
+                    rawData
+                        ? Object.entries(rawData).map(([key, value]) => ({
+                              name: value.displayName,
+                              value: key,
+                          }))
+                        : [],
+                )
                 .setDescription(
                     "The name of the branch to view. Leave blank to view all branches",
                 ),
@@ -70,24 +142,11 @@ export const gymCommand = {
         data: Branches,
     ) => {
         const id = interaction.id;
-        const message = {
-            embeds: [embeds.home(data[Object.keys(data)[0]])],
-            components: [
-                optionsRow(
-                    id,
-                    subscriptions[Object.keys(data)[0]] ===
-                        interaction.channelId,
-                    ["home"],
-                ),
-                navigationRow(id),
-            ],
-        };
+        const gymUID =
+            (interaction.options.get("branch")?.value as string) ??
+            Object.keys(data)[0];
+        const message = buildMessage(gymUID, id, "home", data, interaction);
         await interaction.reply(message);
-        messageCache[id] = {
-            gymUID: Object.keys(data)[0],
-            state: message,
-            createdAt: new Date(),
-        };
     },
     // handle button interactions for this command
     buttonHandler: async (interaction, data) => {
@@ -112,69 +171,52 @@ export const gymCommand = {
         }
 
         if (action === "subscribe") {
-            subscriptions[cached.gymUID] = interaction.channelId;
-            const newMessage = {
-                embeds: cached.state.embeds,
-                components: [
-                    optionsRow(
-                        id,
-                        true,
-                        messageCache[id].disabledButtons ?? [],
-                    ),
-                    navigationRow(id),
-                ],
-            };
+            if (!subscriptions[cached.gymUID]) {
+                subscriptions[cached.gymUID] = [];
+            }
+            subscriptions[cached.gymUID].push(interaction.channelId);
+            const newMessage = buildMessage(
+                cached.gymUID,
+                id,
+                cached.currentPage,
+                data,
+                interaction,
+            );
             await interaction.update(newMessage);
-            messageCache[id].state = newMessage;
         } else if (action === "unsubscribe") {
-            delete subscriptions[cached.gymUID];
-            const newMessage = {
-                embeds: cached.state.embeds,
-                components: [
-                    optionsRow(
-                        id,
-                        false,
-                        messageCache[id].disabledButtons ?? [],
-                    ),
-                    navigationRow(id),
-                ],
-            };
+            subscriptions[cached.gymUID] = subscriptions[cached.gymUID].filter(
+                (id) => id !== interaction.channelId,
+            );
+            const newMessage = buildMessage(
+                cached.gymUID,
+                id,
+                cached.currentPage,
+                data,
+                interaction,
+            );
             await interaction.update(newMessage);
-            messageCache[id].state = newMessage;
         } else if (action === "schedule") {
         } else if (action === "news") {
         } else if (action === "capacity") {
-            messageCache[id].disabledButtons = ["capacity"];
             // switch the to the capacity embed for the gym
-            const newMessage = {
-                embeds: [embeds.capacity(data, cached.gymUID)],
-                components: [
-                    optionsRow(
-                        id,
-                        subscriptions[cached.gymUID] === interaction.channelId,
-                        messageCache[id].disabledButtons ?? [],
-                    ),
-                    navigationRow(id),
-                ],
-            };
+            const newMessage = buildMessage(
+                cached.gymUID,
+                id,
+                "capacity",
+                data,
+                interaction,
+            );
             await interaction.update(newMessage);
-            messageCache[id].state = newMessage;
         } else if (action === "select") {
         } else if (action === "home") {
-            messageCache[id].disabledButtons = ["home"];
-            const newMessage = {
-                embeds: [embeds.home(data[cached.gymUID])],
-                components: [
-                    optionsRow(
-                        id,
-                        subscriptions[cached.gymUID] === interaction.channelId,
-                        messageCache[id].disabledButtons ?? [],
-                    ),
-                    navigationRow(id),
-                ],
-            };
+            const newMessage = buildMessage(
+                cached.gymUID,
+                id,
+                "home",
+                data,
+                interaction,
+            );
             await interaction.update(newMessage);
-            messageCache[id].state = newMessage;
         } else if (action === "left" || action === "right") {
             // determine new gym based on button clicked
             const branchIds = Object.keys(data);
@@ -187,23 +229,17 @@ export const gymCommand = {
                 newIndex = (currentIndex + 1) % branchIds.length;
 
             const newGymUID = branchIds[newIndex];
-            // const embedActionMap: Record<
-            const newMessage = {
-                embeds: [embeds.home(data[newGymUID])],
-                components: [
-                    optionsRow(
-                        id,
-                        subscriptions[newGymUID] === interaction.channelId,
-                        messageCache[id].disabledButtons ?? [],
-                    ),
-                    navigationRow(id),
-                ],
-            };
+
+            const newMessage = buildMessage(
+                newGymUID,
+                id,
+                cached.currentPage,
+                data,
+                interaction,
+            );
 
             // respond and update cache
             await interaction.update(newMessage);
-            messageCache[id].state = newMessage;
-            messageCache[id].gymUID = newGymUID;
         }
     },
 } satisfies Command;
