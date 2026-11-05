@@ -1,4 +1,4 @@
-{ pkgs, lib, config, inputs, ... }:
+{ ... }:
 
 {
   languages.javascript = {
@@ -7,8 +7,13 @@
     corepack.enable = true;
   };
 
+  processes = {
+    start = {
+      exec = "yarn start";
+    };
+  };
+
   scripts = {
-    run.exec = "yarn start";
     deploy.exec = "yarn deploy";
   };
 

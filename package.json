@@ -6,8 +6,8 @@
         "deploy": "npx tsx src/registerCommands.ts"
     },
     "dependencies": {
-        "discord-api-types": "^0.38.22",
-        "discord.js": "^14.22.1",
-        "tsx": "^4.21.0"
+        "discord-api-types": "^0.38.57",
+        "discord.js": "^14.28.1",
+        "tsx": "^4.23.15"
     }
 }
