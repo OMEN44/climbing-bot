@@ -57,7 +57,7 @@ export interface CapacityData {
 
 export type Branches = Record<string, Branch>;
 
-export const FAST_UPDATE_INTERVAL = 1 * 60 * 1000; // minutes (in milliseconds)
+export const FAST_UPDATE_INTERVAL = 1 * 60 * 1000; // 1 minute (in milliseconds)
 export const FAST_UPDATES_PER_DAY =
     (24 * 60 * 60 * 1000) / FAST_UPDATE_INTERVAL; // number of updates in a day
 export const WEEKS_OF_TREND = 6; // number of weeks to keep in trend data

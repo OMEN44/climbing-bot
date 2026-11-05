@@ -3,12 +3,14 @@ import { Config } from "./types";
 import { Branches, handleData } from "../data/urbanClimb";
 import { availableCommands } from "../commands/commands";
 import { cacheCleaner } from "../commands/gym";
+import { handleSubscriptions } from "./subscriptions";
 
 let data: Branches | null = null;
 
 export const app = async (dClient: Client, config: Config) => {
     // init data
     const { cleanup } = await handleData((b) => {
+        handleSubscriptions(dClient, data, b);
         data = b;
     });
 

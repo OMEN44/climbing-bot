@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import {
     ButtonInteraction,
     ChatInputCommandInteraction,
@@ -16,6 +17,12 @@ export type PageName = "home" | "schedule" | "news" | "capacity";
 
 // map of gym UID to get updates for and the channel ID to send them to
 export const subscriptions: Record<string, string[]> = {};
+try {
+    const subs = fs.readFileSync("./subs.json", "utf-8");
+    Object.assign(subscriptions, JSON.parse(subs));
+} catch (e) {
+    console.error("Failed to load subscriptions data", e);
+}
 const messageCache: Record<
     string,
     {
@@ -26,6 +33,16 @@ const messageCache: Record<
         createdAt: Date;
     }
 > = {};
+
+// save to subscriptions.json when variables are updated
+const storeSubscriptions = (subs: Record<string, string[]>) => {
+    try {
+        const s = JSON.stringify(subs, null, 2);
+        fs.writeFileSync("./subs.json", s);
+    } catch (e) {
+        console.error("Failed to save subscriptions data", e);
+    }
+};
 
 const COMMAND_NAME = "gym";
 const navigationRow = (id: string) =>
@@ -175,6 +192,7 @@ export const gymCommand = {
                 subscriptions[cached.gymUID] = [];
             }
             subscriptions[cached.gymUID].push(interaction.channelId);
+            storeSubscriptions(subscriptions);
             const newMessage = buildMessage(
                 cached.gymUID,
                 id,
@@ -187,6 +205,7 @@ export const gymCommand = {
             subscriptions[cached.gymUID] = subscriptions[cached.gymUID].filter(
                 (id) => id !== interaction.channelId,
             );
+            storeSubscriptions(subscriptions);
             const newMessage = buildMessage(
                 cached.gymUID,
                 id,
@@ -257,5 +276,3 @@ export const cacheCleaner = (intervalMins: number, timeToLive: number) => {
         intervalMins * 60 * 1000,
     );
 };
-
-export const handleSubscriptions = () => {};
